@@ -57,6 +57,13 @@ In addition to the info above, we want to change all the hardcoded configuration
 using application.yml or application.properties
 
 To use SingleConnectionFactory Approach --> JmsConfig.java
+<b> SingleConnectionFactory</b>
+- Returns the same Connection from all createConnection() calls
+- Ignores calls to Connection.close()
+- Is thread-safe compared to JDBC calls
+- Shared connections can be recovered in case of exceptions.
+  This is done updating setReconnectOnException(true).
+  
   ```
   //Using SingleConnectionFactory approach
 	@Value("${spring.activemq.broker-url}")
@@ -90,3 +97,44 @@ To use SingleConnectionFactory Approach --> JmsConfig.java
 		return singleConnectionFactory;
 	}
   ```
+
+  <b>CachingConnectionFactory</b>
+- Returns same connection from createConnection() calls
+- Ignores calls to Connection.close()
+- Is thread-safe compared to JDBC calls
+- Default setReconnectOnException(true)
+
+```
+  //Using CachingConnectionFactory approach
+	@Value("${spring.activemq.broker-url}")
+	private String brokerUrl;
+	
+	@Value("${spring.activemq.user}")
+	private String user;
+	
+	@Value("${spring.activemq.password}")
+	private String password;
+	.
+	.
+	.
+	.
+	//comment out the previous connection and add the new one
+	
+	/*
+	@Bean
+	public ActiveMQConnectionFactory connectionFactory(){
+		ActiveMQConnectionFactory factory = new ActiveMQConnectionFactory("admin","admin","tcp://localhost:61616");
+		return factory;
+	}
+	*/
+	// CachingConnectionFactory approach
+	@Bean
+	public CachingConnectionFactory connectionFactory(){
+		ActiveMQConnectionFactory factory = new ActiveMQConnectionFactory(user, password, brokerUrl);
+		CachingConnectionFactory cacheConnectionFactory = new CachingConnectionFactory(factory);
+		cacheConnectionFactory.setClientId("StoreFront");
+		cacheConnectionFactory.setSessionCacheSize(100); //use anything more than 1
+		return cacheConnectionFactory;
+	}
+
+```

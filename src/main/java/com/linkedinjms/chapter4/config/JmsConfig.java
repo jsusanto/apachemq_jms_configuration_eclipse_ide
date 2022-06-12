@@ -2,7 +2,11 @@ package com.linkedinjms.chapter4.config;
 
 import java.awt.List;
 
+import javax.jms.ConnectionFactory;
+
 import org.apache.activemq.ActiveMQConnectionFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jms.annotation.EnableJms;
@@ -10,6 +14,7 @@ import org.springframework.jms.annotation.JmsListenerConfigurer;
 import org.springframework.jms.config.DefaultJmsListenerContainerFactory;
 import org.springframework.jms.config.JmsListenerEndpointRegistrar;
 import org.springframework.jms.config.SimpleJmsListenerEndpoint;
+import org.springframework.jms.connection.SingleConnectionFactory;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.jms.support.converter.MappingJackson2MessageConverter;
 import org.springframework.jms.support.converter.MarshallingMessageConverter;
@@ -26,6 +31,17 @@ import com.linkedinjms.chapter4.pojos.Customer;
 //Add the annotation below so that Spring will know that this is part of configuration
 @Configuration
 public class JmsConfig implements JmsListenerConfigurer{
+	
+	//Using SingleConnectionFactory approach
+	@Value("${spring.activemq.broker-url}")
+	private String brokerUrl;
+	
+	@Value("${spring.activemq.user}")
+	private String user;
+	
+	@Value("${spring.activemq.password}")
+	private String password;
+	
 	/*
 	 * Remember to use JmsSupportConverterOne
 	 * @Bean to tell Spring to prepopulate these config
@@ -47,10 +63,21 @@ public class JmsConfig implements JmsListenerConfigurer{
 		return converter;
 	}
 	
+	/*
 	@Bean
 	public ActiveMQConnectionFactory connectionFactory(){
 		ActiveMQConnectionFactory factory = new ActiveMQConnectionFactory("admin","admin","tcp://localhost:61616");
 		return factory;
+	}
+	*/
+	@Bean
+	public SingleConnectionFactory connectionFactory(){
+		
+		ActiveMQConnectionFactory factory = new ActiveMQConnectionFactory(user, password, brokerUrl);
+		SingleConnectionFactory singleConnectionFactory = new SingleConnectionFactory(factory); 
+		singleConnectionFactory.setReconnectOnException(true);
+		singleConnectionFactory.setClientId("myclientId");
+		return singleConnectionFactory;
 	}
 
 	@Bean
@@ -66,6 +93,7 @@ public class JmsConfig implements JmsListenerConfigurer{
 
 	//********************************************************************************
 	//Introduce our listener that we have created BookOrderProcessingMessageListener
+	
 	@Override
 	public void configureJmsListeners(JmsListenerEndpointRegistrar registrar) {
 		SimpleJmsListenerEndpoint endpoint = new SimpleJmsListenerEndpoint();
@@ -76,7 +104,7 @@ public class JmsConfig implements JmsListenerConfigurer{
         endpoint.setSubscription("my-subscription");
         registrar.registerEndpoint(endpoint, jmsListenerContainerFactory());
         registrar.setContainerFactory(jmsListenerContainerFactory());
-		
+
 		/*
 		 * By having the configuration above, when we send message
 		 * it will process to the warehouse and to the book order process and to 

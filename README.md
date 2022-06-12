@@ -55,3 +55,38 @@ WarehouseProcessingService sends to book.order.processed.queue and we set up syn
 
 In addition to the info above, we want to change all the hardcoded configuration to the proper configuration method 
 using application.yml or application.properties
+
+To use SingleConnectionFactory Approach --> JmsConfig.java
+  ```
+  //Using SingleConnectionFactory approach
+	@Value("${spring.activemq.broker-url}")
+	private String brokerUrl;
+	
+	@Value("${spring.activemq.user}")
+	private String user;
+	
+	@Value("${spring.activemq.password}")
+	private String password;
+	.
+	.
+	.
+	.
+	//comment out the previous connection and add the new one
+	
+	/*
+	@Bean
+	public ActiveMQConnectionFactory connectionFactory(){
+		ActiveMQConnectionFactory factory = new ActiveMQConnectionFactory("admin","admin","tcp://localhost:61616");
+		return factory;
+	}
+	*/
+	@Bean
+	public SingleConnectionFactory connectionFactory(){
+		
+		ActiveMQConnectionFactory factory = new ActiveMQConnectionFactory(user, password, brokerUrl);
+		SingleConnectionFactory singleConnectionFactory = new SingleConnectionFactory(factory); 
+		singleConnectionFactory.setReconnectOnException(true);
+		singleConnectionFactory.setClientId("myclientId");
+		return singleConnectionFactory;
+	}
+  ```
